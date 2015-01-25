@@ -1,0 +1,26 @@
+{
+  "name": "elephant_node"
+  "version": "0.1.2",
+  "description": "this node server will serve json from elephant-postgres",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "~4.9.x"
+  },
+  "engines": {
+    "node": "0.10.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lehmann314159/elephant_node"
+  },
+  "keywords": [
+    "node",
+    "heroku",
+    "express",
+	"postgres"
+  ],
+  "license": "MIT"
+}
