@@ -2,15 +2,12 @@
 var express  = require('express')            // express server module
 ,   bodyParser = require('body-parser')      // body parser middle-ware
 ,   database = require('./database')
-
 ,   user = require('./models/user')          // model
-/*
-,   journal = require('./models/journal')    // model
-,   metric = require('./models/metric')      // model
-,   unit = require('./models/unit')          // model
-,   duration = require('./models/duration')  // model
-,   task = require('./models/task')          // model
-*/
+//,   journal = require('./models/journal')    // model
+//,   metric = require('./models/metric')      // model
+//,   unit = require('./models/unit')          // model
+//,   duration = require('./models/duration')  // model
+//,   task = require('./models/task')          // model
 ;
 
 // housekeeping
@@ -29,13 +26,15 @@ app.get('/', function(request, response) {
 });
 
 // db demo operations
-//app.get('/create',   database.create);
-app.get('/reset',    database.reset);
+app.get('/create',   database.create);
+app.get('/drop',     database.drop);
 app.get('/populate', database.populate);
 
 // user routes
 app.get('/user',        user.findAll);
 app.get('/user/:id',    user.findById);
+
 app.post('/user',       user.add);
 app.put('/user/:id',    user.update);
+app.delete('/user/',    user.deleteByKVP);
 app.delete('/user/:id', user.delete);

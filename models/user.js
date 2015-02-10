@@ -1,3 +1,4 @@
+var database = require('../database');
 var pg = require('pg');
 
 // Because this is my first javascript project as well as my first node project,
@@ -5,35 +6,11 @@ var pg = require('pg');
 // TODO: abstract query-generators
 // TODO: abstract database functionality
 
-exports.findAll = function(req, res) {
-	var myQuery = 'SELECT * FROM elephant_user';
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(myQuery, function(err, result) {
-			done();
-			if(err) {
-				return console.error(err);
-			}
-			console.log(result.rows);
-			res.json(result.rows);
-		});
-	})
-};
+/////////////////////
+/* CRUD OPERATIONS */
+/////////////////////
 
-exports.findById = function(req, res) {
-	var id = req.params.id;
-	var myQuery = 'SELECT * FROM elephant_user WHERE id = ' + id;
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(myQuery, function(err, result) {
-			done();
-			if(err) {
-				return console.error(err);
-			}
-			console.log(result.rows);
-			res.json(result.rows);
-		});
-	})
-};
-
+// Create
 exports.add = function(req, res) {
 	var keys = [];
 	var values = [];
@@ -45,23 +22,24 @@ exports.add = function(req, res) {
 	}
 	var myQuery = "INSERT INTO elephant_user ";
 	myQuery += "(" + keys.toString() + ") VALUES (" + values.toString() + ");";
-
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(myQuery, function(err, result) {
-			done();
-			if(err) {
-				return console.error(err);
-			}
-			console.log(result.rows);
-			res.send("User added");
-		});
-	})
+	console.log(myQuery);
+	res.json(database.query(myQuery));
 };
 
+
+// Read
+exports.findById = function(req, res) {
+	var id = req.params.id;
+	var myQuery = 'SELECT * FROM elephant_user WHERE id = ' + id;
+	res.json(database.query(myQuery));
+};
+
+
+// Update
 exports.update = function(req, res) {
 	var id = req.params.id;
 	if (!id) {
-		res.send("no id provided - no update");
+		res.json("no id provided - no update");
 		return;
 	}
 
@@ -72,48 +50,52 @@ exports.update = function(req, res) {
 				if (!updateString) {
 					updateString = key + " = '" + req.body[key]  + "'";
 				} else {
-					updateString += " AND " + key + " = '" + req.body[key]  + "'";
+					updateString += ", " + key + " = '" + req.body[key]  + "'";
 				}
 			}
 		}
 	}
 
 	if (!updateString) {
-		res.send("no updated fields provided - no update");
+		res.json("no updated fields provided - no update");
 		return;
 	}
 
 	var myQuery = "UPDATE elephant_user SET " + updateString + " WHERE id = '" + id + "'";
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(myQuery, function(err, result) {
-			done();
-			if(err) {
-				return console.error(err);
-			}
-			console.log(result.rows);
-			res.send("User updated");
-		});
-	})
+	console.log(myQuery);
+	res.json(database.query(myQuery));
 };
 
+
+// Delete
 exports.delete = function(req, res) {
 	// don't need to check this, since the server handles it, but it helps portability
 	var id = req.params.id;
 	if (!id) {
-		res.send("no id provided - no delete");
+		res.json("no id provided - no delete");
 		return;
 	}
 
 	var myQuery = "DELETE FROM elephant_user WHERE id = '" + id + "'";
-	//res.send(myQuery); return;
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(myQuery, function(err, result) {
-			done();
-			if(err) {
-				return console.error(err);
-			}
-			console.log(result.rows);
-			res.send("User deleted");
-		});
-	})
+	console.log(myQuery);
+	res.json(database.query(myQuery));
+};
+
+
+
+///////////////////////
+/* Specialized calls */
+///////////////////////
+
+// Read All
+exports.findAll = function(req, res) {
+	var myQuery = 'SELECT * FROM elephant_user';
+	res.json(database.query(myQuery));
+};
+
+// Delete by key/value
+exports.deleteByKVP = function(req, res) {
+	var myQuery = "DELETE FROM elephant_user WHERE " + database.whereClause(req.body, true);
+	console.log(myQuery);
+	res.json(database.query(myQuery));
 };

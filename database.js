@@ -1,76 +1,389 @@
 var pg = require('pg');
 
-
-var userReset = "DROP SEQUENCE user_seq CASCADE; CREATE SEQUENCE user_seq; DROP TABLE elephant_user; CREATE TABLE elephant_user(id INT NOT NULL PRIMARY KEY DEFAULT nextval('user_seq'::regclass), username VARCHAR(80) NOT NULL UNIQUE, password VARCHAR(80) NOT NULL, email VARCHAR(80) NOT NULL UNIQUE, role VARCHAR(10) NOT NULL DEFAULT 'user', facebook_id VARCHAR(80), fencepost_hour_of_day INT, fencepost_day_of_week INT, fencepost_day_of_month INT, fencepost_month_of_year INT, is_fencepost_link BOOLEAN DEFAULT TRUE); ";
-
-var journalReset = "DROP SEQUENCE journal_seq CASCADE; CREATE SEQUENCE journal_seq; DROP TABLE journal; CREATE TABLE journal(id INT NOT NULL PRIMARY KEY DEFAULT nextval('journal_seq'::regclass), created TIMESTAMP DEFAULT NOW(), title VARCHAR(80) NOT NULL, description TEXT NOT NULL, is_private BOOLEAN DEFAULT TRUE, user_id INT NOT NULL); ";
-
-var taskReset = "DROP SEQUENCE task_seq CASCADE; CREATE SEQUENCE task_seq; DROP TABLE task; CREATE TABLE task(id INT NOT NULL PRIMARY KEY DEFAULT nextval('task_seq'::regclass), name VARCHAR(80) NOT NULL, description TEXT NOT NULL, due_date TIMESTAMP, done_date TIMESTAMP, parent_task_id INT, user_id INT NOT NULL, priority INT DEFAULT 0); ";
-
-var durationReset = "DROP SEQUENCE duration_seq CASCADE; CREATE SEQUENCE duration_seq; DROP TABLE duration; CREATE TABLE duration(id INT NOT NULL PRIMARY KEY DEFAULT nextval('duration_seq'::regclass), name VARCHAR(80) NOT NULL UNIQUE, factor INT NOT NULL UNIQUE); ";
-
-var metricReset = "DROP SEQUENCE metric_seq CASCADE; CREATE SEQUENCE metric_seq; DROP TABLE metric; CREATE TABLE metric(id INT NOT NULL PRIMARY KEY DEFAULT nextval('metric_seq'::regclass), name VARCHAR(80) NOT NULL UNIQUE, is_private BOOLEAN DEFAULT TRUE, user_id INT); ";
-
-var unitReset = "DROP SEQUENCE unit_seq CASCADE; CREATE SEQUENCE unit_seq; DROP TABLE unit; CREATE TABLE unit(id INT NOT NULL PRIMARY KEY DEFAULT nextval('unit_seq'::regclass), name VARCHAR(80) NOT NULL, factor INT NOT NULL UNIQUE, is_private BOOLEAN DEFAULT TRUE, metric_id INT NOT NULL);";
-
-exports.reset = function(req, res) {
+// Workhorse query function
+exports.query = function(inQuery, retObj) {
 	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(userReset, function(err, result) {
+		client.query(inQuery, function(err, result) {
 			done();
 			if(err) return console.error(err);
 			console.log(result.rows);
+			return result;
 		});
 	});
+};
 
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(journalReset, function(err, result) {
-			done();
-			if(err) return console.error(err);
-			console.log(result.rows);
-		});
-	});
-
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(taskReset, function(err, result) {
-			done();
-			if(err) return console.error(err);
-			console.log(result.rows);
-		});
-	});
-
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(durationReset, function(err, result) {
-			done();
-			if(err) return console.error(err);
-			console.log(result.rows);
-		});
-	});
-
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(metricReset, function(err, result) {
-			done();
-			if(err) return console.error(err);
-			console.log(result.rows);
-		});
-	});
-
-	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(unitReset, function(err, result) {
-			done();
-			if(err) return console.error(err);
-			console.log(result.rows);
-		});
-	});
-	res.send("tables created");
+// assembles a where clause
+exports.whereClause = function(body, includeId) {
+	var whereClause = "";
+	for (var key in body) {
+		if (body.hasOwnProperty(key)) {
+			if (key != 'id' || includeId) {
+				if (!whereClause) {
+					whereClause = key + " = '" + body[key]  + "'";
+				} else {
+					whereClause += ", " + key + " = '" + body[key]  + "'";
+				}
+			}
+		}
+	}
+	console.log(whereClause);
+	return whereClause;
 };
 
 exports.populate = function(req, res) {
-	var addUser = "INSERT INTO elephant_user (username, password, email, role, facebook_id) VALUES ('lehmann314159', 'drowssap', 'lehmann314159@gmail.com', 'user', 314159);"
+	var myQuery = "INSERT INTO elephant_user (username, password, email) VALUES ('lehmann314159', 'password', 'lehmann314159@gmail.com');";
+	ret = exports.query(myQuery);
+	res.send("row inserted");
+};
+	
+
+// Creates sequences and schemas
+// I wrote separate functions because I couldn't get sequences to drop
+// conditionally, so dropping tables conditionally wasn't transactional
+exports.create = function(req, res) {
+	var userCreate =
+		"CREATE SEQUENCE user_seq; "
+		+ "CREATE TABLE elephant_user("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('user_seq'::regclass)"
+		+ ", username VARCHAR(80) NOT NULL UNIQUE"
+		+ ", password VARCHAR(80) NOT NULL"
+		+ ", email VARCHAR(80) NOT NULL UNIQUE"
+		+ ", role VARCHAR(10) NOT NULL DEFAULT 'user'"
+		+ ", facebook_id VARCHAR(80)"
+		+ ", fencepost_hour_of_day INT"
+		+ ", fencepost_day_of_week INT"
+		+ ", fencepost_day_of_month INT"
+		+ ", fencepost_month_of_year INT"
+		+ ", is_fencepost_link BOOLEAN DEFAULT TRUE"
+	+ ");";
+
 	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
-		client.query(addUser, function(err, result) {
+		client.query(userCreate, function(err, result) {
 			done();
 			if(err) return console.error(err);
 			console.log(result.rows);
 		});
 	});
+
+
+	var journalCreate =
+		"CREATE SEQUENCE journal_seq; "
+		+ "CREATE TABLE journal("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('journal_seq'::regclass)"
+		+ ", created TIMESTAMP DEFAULT NOW()"
+		+ ", title VARCHAR(80) NOT NULL"
+		+ ", description TEXT NOT NULL"
+		+ ", is_private BOOLEAN DEFAULT TRUE"
+		+ ", user_id INT NOT NULL"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(journalCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+
+	var taskCreate =
+		"CREATE SEQUENCE task_seq; "
+		+ "CREATE TABLE task("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('task_seq'::regclass)"
+		+ ", title VARCHAR(80) NOT NULL"
+		+ ", description TEXT NOT NULL"
+		+ ", due_date TIMESTAMP"
+		+ ", done_date TIMESTAMP"
+		+ ", parent_task_id INT"
+		+ ", user_id INT NOT NULL"
+		+ ", priority INT DEFAULT 0"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(taskCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+
+	var durationCreate =
+		"CREATE SEQUENCE duration_seq; "
+		+ "CREATE TABLE duration("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('duration_seq'::regclass)"
+		+ ", title VARCHAR(80) NOT NULL UNIQUE"
+		+ ", factor INT NOT NULL UNIQUE"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(durationCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+
+	var metricCreate = 
+		"CREATE SEQUENCE metric_seq; "
+		+ "CREATE TABLE metric("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('metric_seq'::regclass)"
+		+ ", title VARCHAR(80) NOT NULL UNIQUE"
+		+ ", is_private BOOLEAN DEFAULT TRUE"
+		+ ", user_id INT"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(metricCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+
+	var unitCreate =
+		"CREATE SEQUENCE unit_seq; "
+		+ "CREATE TABLE unit("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('unit_seq'::regclass)"
+		+ ", title VARCHAR(80) NOT NULL"
+		+ ", factor INT NOT NULL UNIQUE"
+		+ ", is_private BOOLEAN DEFAULT TRUE"
+		+ ", metric_id INT NOT NULL"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(unitCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+
+	var activityTypeCreate =
+		"CREATE SEQUENCE activity_type_seq; "
+		+ "CREATE TABLE activity_type("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('activity_type_seq'::regClass)"
+		+ ", title VARCHAR(80) NOT NULL UNIQUE"
+		+ ", notes TEXT"
+		+ ", is_private BOOLEAN DEFAULT TRUE"
+		+ ", user_id INT"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(activityTypeCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	var activityCreate =
+		"CREATE SEQUENCE activity_seq; "
+		+ "CREATE TABLE activity("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('activity_seq'::regclass)"
+		+ ", notes TEXT"
+		+ ", is_private BOOLEAN DEFAULT TRUE"
+		+ ", activity_id INT NOT NULL"
+		+ ", user_id INT NOT NULL"
+	+ ");"
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(activityCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	var interestTemplateCreate =
+		"CREATE SEQUENCE interest_template_seq; "
+		+ "CREATE TABLE interest_template("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('interest_template_seq'::regclass)"
+		+ ", title VARCHAR(80) NOT NULL UNIQUE"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(interestTemplateCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	var interestCreate =
+		"CREATE SEQUENCE interest_seq; "
+		+ "CREATE TABLE interest("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('interest_seq'::regclass)"
+		+ ", title VARCHAR(80) NOT NULL"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(interestCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	var goalOperatorCreate =
+		"CREATE SEQUENCE goal_operator_seq; "
+		+ "CREATE TABLE goal_operator("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('goal_operator_seq'::regclass)"
+		+ ", title VARCHAR(80) NOT NULL"
+		+ ", aggregator VARCHAR(10) NOT NULL"
+		+ ", function VARCHAR(255) NOT NULL"
+		+ ", user_id INT"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(goalOperatorCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	var goalCreate =
+		"CREATE SEQUENCE goal_seq; "
+		+ "CREATE TABLE goal("
+		+ "id INT NOT NULL PRIMARY KEY DEFAULT nextval('goal_seq'::regclass)"
+		+ ", title VARCHAR(80) NOT NULL"
+		+ ", activity_type_id INT NOT NULL"
+		+ ", operand_one NUMERIC NOT NULL"
+		+ ", operand_two NUMERIC"
+		+ ", unit_id INT NOT NULL"
+		+ ", goal_operator_id INT NOT NULL"
+		+ ", duration_id INT NOT NULL"
+		+ ", duration_count INT NOT NULL"
+		+ ", is_private BOOLEAN DEFAULT TRUE"
+		+ ", user_id INT NOT NULL"
+	+ ");";
+
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(goalCreate, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	res.send("tables created");
+};
+
+// drops sequences and schemas
+// I wrote separate functions because I couldn't get sequences to drop
+// conditionally, so dropping tables conditionally wasn't transactional
+exports.drop = function(req, res) {
+	var drop = "DROP SEQUENCE user_seq CASCADE;              DROP TABLE elephant_user;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE journal_seq CASCADE;           DROP TABLE journal;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE task_seq CASCADE;              DROP TABLE task;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE duration_seq CASCADE;          DROP TABLE duration;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE metric_seq CASCADE;            DROP TABLE metric;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE unit_seq CASCADE;              DROP TABLE unit;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE activity_type_seq CASCADE;     DROP TABLE activity_type;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE activity_seq CASCADE;          DROP TABLE activity;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE interest_template_seq CASCADE; DROP TABLE interest_template;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE interest_seq CASCADE;          DROP TABLE interest;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE goal_operator_seq CASCADE;     DROP TABLE goal_operator;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	drop = "DROP SEQUENCE goal_seq CASCADE;              DROP TABLE goal;";
+	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
+		client.query(drop, function(err, result) {
+			done();
+			if(err) return console.error(err);
+			console.log(result.rows);
+		});
+	});
+
+	res.send('sequences and tables dropped...');
 };
