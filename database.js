@@ -1,7 +1,7 @@
 var pg = require('pg');
 
 // Workhorse query function
-exports.query = function(inQuery, retObj) {
+exports.query = function(inQuery) {
 	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
 		client.query(inQuery, function(err, result) {
 			done();
@@ -14,20 +14,58 @@ exports.query = function(inQuery, retObj) {
 
 // assembles a where clause
 exports.whereClause = function(body, includeId) {
-	var whereClause = "";
+	if (typeof body != "object") {
+		body = {"id": body};
+		includeId = true;
+	}
+
+	var whereString = "WHERE ";
 	for (var key in body) {
 		if (body.hasOwnProperty(key)) {
 			if (key != 'id' || includeId) {
-				if (!whereClause) {
-					whereClause = key + " = '" + body[key]  + "'";
+				if (whereString == "WHERE ") {
+					whereString += key + " = '" + body[key]  + "' ";
 				} else {
-					whereClause += ", " + key + " = '" + body[key]  + "'";
+					whereString += "AND " + key + " = '" + body[key]  + "' ";
 				}
 			}
 		}
 	}
-	console.log(whereClause);
-	return whereClause;
+	console.log(whereString);
+	return whereString;
+};
+
+// assembles an insert VALUES clause
+exports.valuesClause = function(body) {
+	var keys = [];
+	var values = [];
+	for (var key in body) {
+		if (body.hasOwnProperty(key)) {
+			keys.push(key);
+			values.push("'" + body[key] + "'");
+		}
+	}
+	return "(" + keys.toString() + ") VALUES (" + values.toString() + ")";
+};
+
+// assembles a SET clause
+exports.setClause = function(body) {
+	var setString = "SET ";
+	for (var key in body) {
+		if (body.hasOwnProperty(key)) {
+			if (
+				key != 'id'
+				&& key.substring(0, 4) == "new_"
+			) {
+				if (setString == "SET ") {
+					setString += key.substring(4) + " = '" + body[key]  + "' ";
+				} else {
+					setString += ", " + key.substring(4) + " = '" + body[key]  + "' ";
+				}
+			}
+		}
+	}
+	return setString;
 };
 
 exports.populate = function(req, res) {
