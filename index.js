@@ -31,10 +31,13 @@ app.get('/drop',     database.drop);
 app.get('/populate', database.populate);
 
 // user routes
-app.get('/user',        user.findAll);
+app.post('/user',       user.add);
+
+app.get('/user',        user.find);
 app.get('/user/:id',    user.findById);
 
-app.post('/user',       user.add);
+app.put('/user',        user.update);
 app.put('/user/:id',    user.update);
-app.delete('/user/',    user.deleteByKVP);
-app.delete('/user/:id', user.delete);
+
+app.delete('/user/',    user.delete);
+app.delete('/user/:id', user.deleteById);

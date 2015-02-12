@@ -12,18 +12,23 @@ exports.query = function(inQuery) {
 	});
 };
 
+
+/*
+ * SQL component functions
+ */
+
 // assembles a where clause
 exports.whereClause = function(body, includeId) {
-	if (typeof body != "object") {
-		body = {"id": body};
-		includeId = true;
-	}
+	if (!body) { return ""; }
 
-	var whereString = "WHERE ";
+	var whereString = " WHERE ";
 	for (var key in body) {
 		if (body.hasOwnProperty(key)) {
-			if (key != 'id' || includeId) {
-				if (whereString == "WHERE ") {
+			if  (
+				(key != 'id' || includeId) 
+				&& (key.substring(0, 4) != "new_")
+			) {
+				if (whereString == " WHERE ") {
 					whereString += key + " = '" + body[key]  + "' ";
 				} else {
 					whereString += "AND " + key + " = '" + body[key]  + "' ";
@@ -31,12 +36,12 @@ exports.whereClause = function(body, includeId) {
 			}
 		}
 	}
-	console.log(whereString);
-	return whereString;
+	return (whereString != " WHERE ") ? whereString : "";
 };
 
 // assembles an insert VALUES clause
 exports.valuesClause = function(body) {
+	if (!body) { return ""; }
 	var keys = [];
 	var values = [];
 	for (var key in body) {
@@ -45,19 +50,17 @@ exports.valuesClause = function(body) {
 			values.push("'" + body[key] + "'");
 		}
 	}
-	return "(" + keys.toString() + ") VALUES (" + values.toString() + ")";
+	return " (" + keys.toString() + ") VALUES (" + values.toString() + ") ";
 };
 
 // assembles a SET clause
 exports.setClause = function(body) {
-	var setString = "SET ";
+	if (!body) { return ""; }
+	var setString = " SET ";
 	for (var key in body) {
 		if (body.hasOwnProperty(key)) {
-			if (
-				key != 'id'
-				&& key.substring(0, 4) == "new_"
-			) {
-				if (setString == "SET ") {
+			if (key.substring(0, 4) == "new_") {
+				if (setString == " SET ") {
 					setString += key.substring(4) + " = '" + body[key]  + "' ";
 				} else {
 					setString += ", " + key.substring(4) + " = '" + body[key]  + "' ";
@@ -65,7 +68,7 @@ exports.setClause = function(body) {
 			}
 		}
 	}
-	return setString;
+	return (setString != " SET ") ? setString : "";
 };
 
 exports.populate = function(req, res) {
@@ -73,7 +76,38 @@ exports.populate = function(req, res) {
 	ret = exports.query(myQuery);
 	res.send("row inserted");
 };
-	
+
+// Frankenstein
+exports.assemble = function(bag) {
+	var q = "";
+	if (typeof bag != "object") { return ""; }
+	if (!bag.hasOwnProperty('domain')) { return ""; }
+
+	switch (bag['action'].toLowerCase()) {
+	case 'insert':
+		if (!bag.hasOwnProperty('parameters')) { return ""; }
+		 q = "INSERT INTO " + bag['domain'] + exports.valuesClause(bag['parameters']);
+		break;
+
+	case 'select':
+		// I'm tired, so I'm handling interesting field selection later
+		q = "SELECT * FROM " + bag['domain']
+			+ exports.whereClause(bag['parameters'], true);
+		break;
+
+	case 'update':
+		q = "UPDATE " + bag['domain'] + exports.setClause(bag['parameters'])
+			+ exports.whereClause(bag['parameters']);
+		break;
+
+	case 'delete':
+		q = "DELETE FROM " + bag['domain'] + exports.whereClause(bag['parameters']);
+		break;
+	}
+
+	console.log(q);
+	return q;
+};
 
 // Creates sequences and schemas
 // I wrote separate functions because I couldn't get sequences to drop
