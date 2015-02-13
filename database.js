@@ -7,7 +7,7 @@ exports.query = function(inQuery) {
 			done();
 			if(err) return console.error(err);
 			console.log(result.rows);
-			return result;
+			return result.rows;
 		});
 	});
 };
@@ -458,4 +458,48 @@ exports.drop = function(req, res) {
 	});
 
 	res.send('sequences and tables dropped...');
+};
+
+/////////////////////
+/* CRUD OPERATIONS */
+/////////////////////
+
+// Create
+exports.genericCreate = function(domain, body) {
+	return exports.query(
+		exports.assemble({
+			"action": "insert",
+			"domain": domain,
+			"parameters": body
+	}));
+};
+
+// Read
+exports.genericRead = function(domain, body) {
+	return exports.query(
+		exports.assemble({
+			"action": "select",
+			"domain": domain,
+			"parameters": body
+	}));
+};
+
+// Update
+exports.genericUpdate = function(domain, body) {
+	return exports.query(
+		exports.assemble({
+			"action": "update",
+			"domain": domain,
+			"parameters": body
+	}));
+};
+
+// Delete by key/value
+exports.genericDelete = function(domain, body) {
+	return exports.query(
+		exports.assemble({
+			"action": "delete",
+			"domain": domain,
+			"parameters": body
+	}));
 };
