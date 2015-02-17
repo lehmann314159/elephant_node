@@ -6,20 +6,20 @@ var database = require("../database");
 
 /* Create */
 exports.add = function(req, res) {
-	res.json(database.genericCreate("journal", req.body));
+	database.genericCreate("journal", req.body, res);
 };
 
 
 /* Read All */
 exports.find = function(req, res) {
-	res.send(database.genericRead("journal", req.body));
+	database.genericRead("journal", req.body, res);
 };
 
 
 /* Read by ID */
 exports.findById = function(req, res) {
 	req.body = { "id": req.params.id};
-	res.send(database.genericRead("journal", req.body));
+	database.genericRead("journal", req.body, res);
 };
 
 
@@ -29,7 +29,7 @@ exports.update = function(req, res) {
 		req.body['id'] = req.params.id;
 	}
 
-	res.json(database.genericUpdate("journal", req.body));
+	database.genericUpdate("journal", req.body, res);
 };
 
 
@@ -40,11 +40,11 @@ exports.deleteById = function(req, res) {
 		return;
 	}
 
-	res.json(database.genericDelete("journal", req.body));
+	database.genericDelete("journal", req.body, res);
 };
 
 
 /* Delete by key/value */
 exports.delete = function(req, res) {
-	res.json(database.genericDelete("journal", req.body));
+	database.genericDelete("journal", req.body, res);
 };

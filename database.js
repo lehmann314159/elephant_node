@@ -1,13 +1,17 @@
 var pg = require('pg');
 
 // Workhorse query function
-exports.query = function(inQuery) {
+exports.query = function(inQuery, res) {
 	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
 		client.query(inQuery, function(err, result) {
 			done();
-			if(err) return console.error(err);
-			console.log(result.rows);
-			return result.rows;
+			if(err) {
+				res.json(err);
+			} else {
+				console.log('in query function:' + result.rows.toString());
+				console.log(result.rows);
+				res.json(result.rows);
+			}
 		});
 	});
 };
@@ -105,7 +109,8 @@ exports.assemble = function(bag) {
 		break;
 	}
 
-	console.log(q);
+	console.log('in assemble:' + q);
+	//console.log(q);
 	return q;
 };
 
@@ -465,41 +470,41 @@ exports.drop = function(req, res) {
 /////////////////////
 
 // Create
-exports.genericCreate = function(domain, body) {
-	return exports.query(
+exports.genericCreate = function(domain, body, res) {
+	exports.query(
 		exports.assemble({
 			"action": "insert",
 			"domain": domain,
 			"parameters": body
-	}));
+	}), res);
 };
 
 // Read
-exports.genericRead = function(domain, body) {
-	return exports.query(
+exports.genericRead = function(domain, body, res) {
+	exports.query(
 		exports.assemble({
 			"action": "select",
 			"domain": domain,
 			"parameters": body
-	}));
+	}), res);
 };
 
 // Update
-exports.genericUpdate = function(domain, body) {
+exports.genericUpdate = function(domain, body, res) {
 	return exports.query(
 		exports.assemble({
 			"action": "update",
 			"domain": domain,
 			"parameters": body
-	}));
+	}), res);
 };
 
 // Delete by key/value
-exports.genericDelete = function(domain, body) {
+exports.genericDelete = function(domain, body, res) {
 	return exports.query(
 		exports.assemble({
 			"action": "delete",
 			"domain": domain,
 			"parameters": body
-	}));
+	}), res);
 };
