@@ -8,7 +8,6 @@ exports.query = function(inQuery, res) {
 			if(err) {
 				res.json(err);
 			} else {
-				console.log('in query function:' + result.rows.toString());
 				console.log(result.rows);
 				res.json(result.rows);
 			}
@@ -90,7 +89,7 @@ exports.assemble = function(bag) {
 	switch (bag['action'].toLowerCase()) {
 	case 'insert':
 		if (!bag.hasOwnProperty('parameters')) { return ""; }
-		 q = "INSERT INTO " + bag['domain'] + exports.valuesClause(bag['parameters']);
+		 q = "INSERT INTO " + bag['domain'] + exports.valuesClause(bag['parameters']) + " RETURNING id";
 		break;
 
 	case 'select':
@@ -100,17 +99,16 @@ exports.assemble = function(bag) {
 		break;
 
 	case 'update':
-		q = "UPDATE " + bag['domain'] + exports.setClause(bag['parameters'])
+		q = "UPDATE " + bag['domain'] + exports.setClause(bag['parameters'], true)
 			+ exports.whereClause(bag['parameters']);
 		break;
 
 	case 'delete':
-		q = "DELETE FROM " + bag['domain'] + exports.whereClause(bag['parameters']);
+		q = "DELETE FROM " + bag['domain'] + exports.whereClause(bag['parameters'], true);
 		break;
 	}
 
-	console.log('in assemble:' + q);
-	//console.log(q);
+	console.log('assembled query: ' + q);
 	return q;
 };
 

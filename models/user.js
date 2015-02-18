@@ -35,16 +35,20 @@ exports.update = function(req, res) {
 
 /* Delete  by ID */
 exports.deleteById = function(req, res) {
+	console.log("by ID");
 	if (!req.params.id) {
 		res.json("no id provided - no delete");
 		return;
 	}
-
-	database.genericDelete("elephant_user", req.body);
+	if (req.params.id) {
+		req.body['id'] = req.params.id;
+	}
+	database.genericDelete("elephant_user", req.body, res);
 };
 
 
 /* Delete by key/value */
 exports.delete = function(req, res) {
+	console.log("RAWR");
 	database.genericDelete("elephant_user", req.body, res);
 };

@@ -45,13 +45,13 @@ app.delete('/user/:id', user.deleteById);
 
 
 // journal routes
-app.post('/journal',       journal.add);
+app.post('/user/:uid/journal',        journal.add);
 
-app.get('/journal',        journal.find);
-app.get('/journal/:id',    journal.findById);
+app.get('/user/:uid/journal',         journal.find);
+app.get('/user/:uid/journal/:jid',    journal.findById);
 
-app.put('/journal',        journal.update);
-app.put('/journal/:id',    journal.update);
+app.put('/user/:uid/journal',         journal.update);
+app.put('/user/:uid/journal/:jid',    journal.update);
 
-app.delete('/journal/',    journal.delete);
-app.delete('/journal/:id', journal.deleteById);
+app.delete('/user/:uid/journal/',     journal.delete);
+app.delete('/user/:uid/journal/:jid', journal.deleteById);
