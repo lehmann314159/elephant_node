@@ -2,14 +2,19 @@ var pg = require('pg');
 
 // Workhorse query function
 exports.query = function(inQuery, res) {
+	//console.log('processing: ' + inQuery);
 	pg.connect(process.env.HEROKU_POSTGRESQL_DBNAME_URL, function(err, client, done) {
 		client.query(inQuery, function(err, result) {
 			done();
-			if(err) {
-				res.json(err);
-			} else {
-				console.log(result.rows);
-				res.json(result.rows);
+			if (!result) { 
+				result = { "rows": "no rows returned" };
+			}
+			if (res) {
+				if(err) {
+					res.json(err);
+				} else {
+					res.json(result.rows);
+				}
 			}
 		});
 	});
@@ -27,10 +32,7 @@ exports.whereClause = function(body, includeId) {
 	var whereString = " WHERE ";
 	for (var key in body) {
 		if (body.hasOwnProperty(key)) {
-			if  (
-				(key != 'id' || includeId) 
-				&& (key.substring(0, 4) != "new_")
-			) {
+			if  (key.substring(0, 4) != "new_") {
 				if (whereString == " WHERE ") {
 					whereString += key + " = '" + body[key]  + "' ";
 				} else {
@@ -74,12 +76,6 @@ exports.setClause = function(body) {
 	return (setString != " SET ") ? setString : "";
 };
 
-exports.populate = function(req, res) {
-	var myQuery = "INSERT INTO elephant_user (username, password, email) VALUES ('lehmann314159', 'password', 'lehmann314159@gmail.com');";
-	ret = exports.query(myQuery);
-	res.send("row inserted");
-};
-
 // Frankenstein
 exports.assemble = function(bag) {
 	var q = "";
@@ -110,6 +106,12 @@ exports.assemble = function(bag) {
 
 	console.log('assembled query: ' + q);
 	return q;
+};
+
+exports.populate = function(req, res) {
+	var myQuery = "INSERT INTO elephant_user (username, password, email) VALUES ('lehmann314159', 'password', 'lehmann314159@gmail.com');";
+	ret = exports.query(myQuery);
+	res.send("row inserted");
 };
 
 // Creates sequences and schemas
